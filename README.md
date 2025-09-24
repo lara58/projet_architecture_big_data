@@ -1,44 +1,60 @@
-# Projet d'Architecture Big Data - Analyse des Tremblements de Terre
+# Projet d'Architecture Big Data - Données Météorologiques
 
 ## Description du Projet
 
-Ce projet consiste à développer une architecture Big Data pour analyser les données des tremblements de terre en temps réel en utilisant l'API USGS (United States Geological Survey). L'objectif est de créer un pipeline de données complet pour ingérer, traiter et analyser les données sismiques mondiales.
+Pipeline de données Lambda Architecture utilisant l'API Open Meteo pour collecter, traiter et visualiser les données météorologiques en temps réel.
+
+## Structure Minimale
+
+```
+projet_architecture_big_data/
+├── docker-compose.yml          # Services: Kafka, Spark, Airflow, Grafana
+├── src/
+│   ├── ingestion/              # Speed Layer (Kafka)
+│   ├── batch/                  # Batch Layer (Spark)
+│   └── serving/                # Serving Layer (API)
+├── airflow/dags/               # Orchestration
+└── frontend/                   # Dashboards
+```
 
 ## API Utilisée
 
-**USGS Earthquake Catalog API**
-- URL : https://earthquake.usgs.gov/fdsnws/event/1/
-- Documentation : https://earthquake.usgs.gov/fdsnws/event/1/
-- Format de données : JSON, CSV, XML
-- Fréquence de mise à jour : Temps réel
+**Open Meteo API**
+- URL : https://api.open-meteo.com/v1/forecast
+- Documentation : https://open-meteo.com/en/docs
+- Format : JSON
+- Gratuite, sans clé API
+- Données en temps réel
 
-### Données Disponibles dans la réponse USGS
+## Démarrage Rapide
 
-**Magnitude des tremblements de terre**
-- Champ : `mag`
-- Exemple : 6.4
+### 1. Démarrer les services
+```powershell
+# PowerShell
+.\scripts\start.ps1
+```
 
-**Localisation géographique (latitude, longitude, profondeur)**
-- Champs : `geometry.coordinates` → [longitude, latitude, profondeur] (en km)
+### 2. Accès aux services
+- **Airflow** : http://localhost:8080 (admin/admin)
+- **Grafana** : http://localhost:3000 (admin/admin)  
+- **Spark** : http://localhost:8081
 
-**Date et heure de l'événement**
-- Champ : `time` (timestamp UNIX, à convertir en date "humaine")
-- Champ : `updated` (dernière mise à jour de l'info)
+### 3. Test du pipeline
+```python
+# Tester le client API
+cd src/ingestion
+python api_client.py
 
-**Type de tremblement de terre**
-- Champ : `type` (dans properties, généralement "earthquake")
+# Démarrer le producteur Kafka
+python weather_producer.py
+```
 
-**Région / Pays affecté**
-- Champ : `place` (description du lieu : ville, région, pays)
+## Données Météo Collectées
 
-**Intensité ressentie**
-- Champs :
-  - `felt` (nombre de personnes ayant ressenti le séisme)
-  - `cdi` (Community Determined Intensity, intensité ressentie)
-  - `mmi` (Modified Mercalli Intensity, intensité instrumentale)
-
-**Alertes tsunami**
-- Champ : `tsunami` (0 = pas d'alerte, 1 = alerte tsunami)
+- **Température** actuelle
+- **Conditions météo** (nuageux, ensoleillé, etc.)
+- **Vitesse du vent**
+- **Villes** : Paris, Lyon, Marseille, Toulouse, Nice
 
 ## Architecture du Système
 
