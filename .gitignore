@@ -1,0 +1,37 @@
+# Ignorer les fichiers de logs et données générées
+docker/logs/
+docker/data/
+logs/
+data/
+
+# Ignorer les fichiers de configuration spécifiques à l'environnement
+*.env
+
+# Ignorer les fichiers Python compilés
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Ignorer les fichiers temporaires
+*.swp
+*.swo
+*~
+
+# Ignorer les fichiers de base de données
+*.db
+*.sqlite3
+
+# Ignorer les fichiers de l'environnement virtuel Python
+venv/
+env/
+ENV/
+
+# Ignorer les fichiers Docker spécifiques
+.dockerignore
+docker/*.log
+docker/postgres_data/
+
+# Fichiers système
+.DS_Store
+Thumbs.db
