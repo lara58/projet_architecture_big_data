@@ -1,44 +1,63 @@
-# Projet d'Architecture Big Data - Analyse des Tremblements de Terre
+# Projet d'Architecture Big Data - Analyse des Données Météorologiques
 
 ## Description du Projet
 
-Ce projet consiste à développer une architecture Big Data pour analyser les données des tremblements de terre en temps réel en utilisant l'API USGS (United States Geological Survey). L'objectif est de créer un pipeline de données complet pour ingérer, traiter et analyser les données sismiques mondiales.
+Ce projet consiste à développer une architecture Big Data pour analyser les données météorologiques en temps réel en utilisant l'API Open-Meteo. L'objectif est de créer un pipeline de données complet pour ingérer, traiter et analyser les données météorologiques mondiales avec une résolution horaire.
 
 ## API Utilisée
 
-**USGS Earthquake Catalog API**
-- URL : https://earthquake.usgs.gov/fdsnws/event/1/
-- Documentation : https://earthquake.usgs.gov/fdsnws/event/1/
-- Format de données : JSON, CSV, XML
-- Fréquence de mise à jour : Temps réel
+**Open-Meteo Weather API**
+- URL : https://api.open-meteo.com/v1/forecast
+- Documentation : https://open-meteo.com/en/docs
+- Format de données : JSON
+- Fréquence de mise à jour : Horaire
+- Accès : Gratuit, sans clé API requise
+- Résolution : 1-11 km selon la localisation
+- Données historiques : 80+ années disponibles
 
-### Données Disponibles dans la réponse USGS
+### Données Disponibles dans la réponse Open-Meteo
 
-**Magnitude des tremblements de terre**
-- Champ : `mag`
-- Exemple : 6.4
+**1. Données de météo actuelle (`current_weather`)**
+- `temperature` : Température (°C)
+- `windspeed` : Vitesse du vent (km/h ou m/s selon le paramètre)
+- `winddirection` : Direction du vent (degrés)
+- `weathercode` : Code météo (ensoleillé, nuageux, pluie, etc.)
+- `time` : Date et heure de la mesure
 
-**Localisation géographique (latitude, longitude, profondeur)**
-- Champs : `geometry.coordinates` → [longitude, latitude, profondeur] (en km)
+**2. Données de prévision (`hourly` ou `daily`)**
+- `temperature_2m` : Température à 2 mètres (°C)
+- `relative_humidity_2m` : Humidité relative à 2 mètres (%)
+- `windspeed_10m` : Vitesse du vent à 10 mètres (km/h)
+- `precipitation` : Précipitations (mm)
+- `weathercode` : Code météo (voir documentation pour les valeurs)
+- `pressure_msl` : Pression atmosphérique au niveau de la mer (hPa)
+- `cloudcover` : Couverture nuageuse (%)
+- `visibility` : Visibilité (km)
+- `dewpoint_2m` : Point de rosée à 2 mètres (°C)
+- `uv_index` : Indice UV
+- `sunrise` / `sunset` : Heure du lever/coucher du soleil (prévisions journalières)
 
-**Date et heure de l'événement**
-- Champ : `time` (timestamp UNIX, à convertir en date "humaine")
-- Champ : `updated` (dernière mise à jour de l'info)
+**3. Coordonnées et infos de la requête**
+- `latitude` / `longitude` : Coordonnées de la localisation demandée
+- `timezone` : Fuseau horaire utilisé
+- `generationtime_ms` : Temps de génération de la réponse (ms)
 
-**Type de tremblement de terre**
-- Champ : `type` (dans properties, généralement "earthquake")
-
-**Région / Pays affecté**
-- Champ : `place` (description du lieu : ville, région, pays)
-
-**Intensité ressentie**
-- Champs :
-  - `felt` (nombre de personnes ayant ressenti le séisme)
-  - `cdi` (Community Determined Intensity, intensité ressentie)
-  - `mmi` (Modified Mercalli Intensity, intensité instrumentale)
-
-**Alertes tsunami**
-- Champ : `tsunami` (0 = pas d'alerte, 1 = alerte tsunami)
+**Exemple de réponse JSON météo actuelle :**
+```json
+{
+  "latitude": 48.85,
+  "longitude": 2.35,
+  "generationtime_ms": 0.3,
+  "timezone": "GMT",
+  "current_weather": {
+    "temperature": 19.2,
+    "windspeed": 14.4,
+    "winddirection": 220,
+    "weathercode": 3,
+    "time": "2025-09-24T09:00"
+  }
+}
+```
 
 ## Architecture du Système
 
@@ -47,7 +66,7 @@ Ce projet consiste à développer une architecture Big Data pour analyser les do
 1. **Ingestion de Données**
    - Apache Kafka pour le streaming en temps réel
    - Apache NiFi pour l'orchestration des flux de données
-   - Connecteurs API USGS
+   - Connecteurs API Open-Meteo
 
 2. **Stockage**
    - Apache Hadoop (HDFS) pour le stockage distribué
@@ -73,42 +92,44 @@ Ce projet consiste à développer une architecture Big Data pour analyser les do
 
 ### Analyses Prévues
 
-1. **Détection de Patterns Sismiques**
-   - Identification des zones à risque élevé
-   - Prédiction de répliques
-   - Analyse des séquences sismiques
+1. **Analyses Climatiques et Météorologiques**
+   - Identification des patterns météorologiques
+   - Prédiction de conditions extrêmes
+   - Analyse des tendances climatiques par région
 
-2. **Alertes en Temps Réel**
-   - Système d'alerte pour les tremblements de terre majeurs (M > 6.0)
-   - Notifications géolocalisées
-   - Intégration avec les systèmes d'urgence
+2. **Alertes Météorologiques en Temps Réel**
+   - Système d'alerte pour conditions météo extrêmes
+   - Notifications géolocalisées (tempêtes, canicules, gel)
+   - Intégration avec les systèmes d'alerte météorologique
 
 3. **Analyses Statistiques**
-   - Tendances sismiques par région
-   - Corrélation magnitude/profondeur
-   - Impact sur les populations
+   - Tendances de température par région et saison
+   - Corrélations pression/précipitations
+   - Analyse des vents dominants
+   - Comparaison avec données historiques
 
 4. **Visualisations Interactives**
-   - Cartes de chaleur en temps réel
-   - Historique des événements sismiques
-   - Dashboards de monitoring
+   - Cartes météorologiques en temps réel
+   - Historique des conditions météo
+   - Dashboards de prévisions
+   - Graphiques de tendances climatiques
 
 ## Exigences du Projet
 
 ### Frontend - Interface Utilisateur
-- **Bouton de téléchargement** : Permettre aux utilisateurs de télécharger les données sismiques au format CSV/JSON
+- **Bouton de téléchargement** : Permettre aux utilisateurs de télécharger les données météorologiques au format CSV/JSON
 - **Affichage tabulaire** : Présentation des données sous forme de tableau interactif
 - **Fonctionnalités d'agrégation** : 
-  - Calcul de statistiques (moyenne, min, max des magnitudes)
-  - Groupement par région, type de séisme, période
-- **Tri dynamique** : Possibilité de trier selon toutes les colonnes (magnitude, date, lieu, profondeur)
-- **Filtres** : Filtrage par magnitude, période, région
+  - Calcul de statistiques (moyenne, min, max des températures, précipitations)
+  - Groupement par région, saison, conditions météorologiques
+- **Tri dynamique** : Possibilité de trier selon toutes les colonnes (température, précipitations, vent, pression)
+- **Filtres** : Filtrage par température, période, région, conditions météo
 
 ### Tests de Connectivité des Services
 - **Test Spark** : Vérification de la connexion et fonctionnement du cluster Spark
 - **Test HDFS** : Validation de l'accès au système de fichiers distribué Hadoop
 - **Test Kafka** : Contrôle du streaming et des topics
-- **Test API USGS** : Vérification de la disponibilité de l'API externe
+- **Test API Open-Meteo** : Vérification de la disponibilité de l'API météorologique
 - **Monitoring automatique** : Scripts de health check pour tous les services
 
 ### Documentation Technique Complète
@@ -182,10 +203,10 @@ docker-compose up -d
 docker-compose ps
 ```
 
-### 4. Configuration de l'API USGS
+### 4. Configuration de l'API Open-Meteo
 ```bash
 # Variables d'environnement
-export USGS_API_URL="https://earthquake.usgs.gov/fdsnws/event/1/"
+export OPENMETEO_API_URL="https://api.open-meteo.com/v1/forecast"
 export KAFKA_BOOTSTRAP_SERVERS="localhost:9092"
 export SPARK_MASTER_URL="spark://localhost:7077"
 ```
@@ -197,11 +218,11 @@ projet_archi_big_data/
 ├── data/
 │   ├── raw/                 # Données brutes de l'API
 │   ├── processed/           # Données traitées
-│   └── output/              # Résultats des analyses
+│   └── output/              # Résultats des analyses météorologiques
 ├── src/
 │   ├── ingestion/           # Scripts d'ingestion Kafka
 │   ├── processing/          # Jobs Spark
-│   ├── analysis/            # Scripts d'analyse
+│   ├── analysis/            # Scripts d'analyse météorologique
 │   ├── visualization/       # Dashboards et graphiques
 │   └── frontend/            # Interface utilisateur web
 ├── config/
@@ -214,7 +235,7 @@ projet_archi_big_data/
 ├── tests/
 │   ├── test_spark_connectivity.py    # Tests Spark
 │   ├── test_hdfs_connectivity.py     # Tests HDFS
-│   ├── test_usgs_api.py              # Tests API USGS
+│   ├── test_openmeteo_api.py         # Tests API Open-Meteo
 │   └── integration/                  # Tests d'intégration
 ├── docs/
 │   ├── architecture/        # Diagrammes et documentation technique
@@ -231,10 +252,10 @@ projet_archi_big_data/
 ### 1. Démarrage du Pipeline de Données
 ```bash
 # Démarrer l'ingestion des données
-python src/ingestion/usgs_kafka_producer.py
+python src/ingestion/openmeteo_kafka_producer.py
 
 # Lancer le traitement Spark
-spark-submit src/processing/earthquake_processor.py
+spark-submit src/processing/weather_processor.py
 ```
 
 ### 2. Accès aux Interfaces
@@ -245,12 +266,12 @@ spark-submit src/processing/earthquake_processor.py
 
 ### 3. Requêtes d'Exemple
 ```python
-# Tremblements de terre des dernières 24h
-from src.analysis.earthquake_analysis import get_recent_earthquakes
-recent_eq = get_recent_earthquakes(hours=24, min_magnitude=4.0)
+# Données météo des dernières 24h
+from src.analysis.weather_analysis import get_recent_weather
+recent_weather = get_recent_weather(hours=24, locations=['Paris', 'London'])
 
-# Analyse par région
-regional_stats = analyze_by_region('Pacific Ring of Fire')
+# Analyse par région climatique
+regional_stats = analyze_by_climate_region('Western Europe')
 ```
 
 ### 4. Tests de Connectivité des Services
@@ -273,13 +294,13 @@ hadoop fs -ls /
 python tests/test_hdfs_connectivity.py
 ```
 
-#### Test de l'API USGS
+#### Test d'API Open-Meteo
 ```bash
 # Test de connectivité API
-python tests/test_usgs_api.py
+python tests/test_openmeteo_api.py
 
 # Validation du format des données
-python tests/validate_api_response.py
+python tests/validate_weather_api_response.py
 ```
 
 ### 5. Frontend - Interface Web
@@ -287,10 +308,10 @@ python tests/validate_api_response.py
 #### Accès à l'interface utilisateur
 - **URL Frontend** : http://localhost:3000
 - **Fonctionnalités disponibles** :
-  - Téléchargement des données (bouton Export CSV/JSON)
-  - Tableau interactif avec tri par colonnes
-  - Filtres par magnitude, date, région
-  - Agrégations statistiques en temps réel
+  - Téléchargement des données météorologiques (bouton Export CSV/JSON)
+  - Tableau interactif avec tri par colonnes (température, précipitations, vent)
+  - Filtres par température, conditions météo, région, période
+  - Agrégations météorologiques en temps réel
 
 ## Monitoring et Performance
 
@@ -301,7 +322,9 @@ python tests/validate_api_response.py
 - **Précision** : Qualité des prédictions
 
 ### Alertes Configurées
-- Pic d'activité sismique (M > 7.0)
+- Conditions météorologiques extrêmes (températures > 40°C ou < -20°C)
+- Précipitations intenses (> 50mm/h)
+- Vents forts (> 100 km/h)
 - Latence élevée (> 5 secondes)
 - Échec des jobs Spark
 - Espace disque faible (< 10%)
@@ -336,7 +359,7 @@ python tests/validate_api_response.py
 #### 3. Documentation des Tests
 - [Procédures de test Spark](docs/testing/spark_tests.md)
 - [Procédures de test HDFS](docs/testing/hdfs_tests.md)
-- [Tests d'intégration API](docs/testing/api_integration.md)
+- [Tests d'intégration API météorologique](docs/testing/weather_api_integration.md)
 - [Validation des données](docs/testing/data_validation.md)
 
 #### 4. Documentation Frontend
@@ -365,16 +388,16 @@ python tests/validate_api_response.py
    - Stockage HDFS opérationnel
 
 2. **Interface utilisateur web complète**
-   - Bouton de téléchargement des données (CSV/JSON)
-   - Tableau interactif avec données sismiques
-   - Fonctionnalités de tri par toutes les colonnes
-   - Système d'agrégation (moyenne, min, max, comptage)
-   - Filtres par magnitude, date, région
+   - Bouton de téléchargement des données météorologiques (CSV/JSON)
+   - Tableau interactif avec données météorologiques
+   - Fonctionnalités de tri par toutes les colonnes (température, précipitations, vent, pression)
+   - Système d'agrégation (moyenne, min, max des températures et précipitations)
+   - Filtres par conditions météo, température, région, période
 
 3. **Tests de connectivité validés**
    - Scripts de test pour Spark
    - Validation de l'accès HDFS
-   - Tests d'intégration API USGS
+   - Tests d'intégration API Open-Meteo
    - Monitoring automatique des services
 
 ### Documentation Complète
@@ -400,11 +423,15 @@ Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de 
 ## Changelog
 
 ### Version 1.0.0
-- Pipeline d'ingestion USGS complet
+- Pipeline d'ingestion Open-Meteo complet
 - Traitement Spark en temps réel
-- Dashboards de visualisation
-- Système d'alertes automatisé
+- Dashboards météorologiques de visualisation
+- Système d'alertes météorologiques automatisé
 
 ---
 
-**Note** : Ce projet est développé dans le cadre d'un projet académique sur l'architecture Big Data. Les données utilisées proviennent de sources publiques (USGS) et sont utilisées uniquement à des fins éducatives et de recherche.
+**Note** : Ce projet est développé dans le cadre d'un projet académique sur l'architecture Big Data. Les données utilisées proviennent de sources publiques (Open-Meteo) et sont utilisées uniquement à des fins éducatives et de recherche.
+
+API USGS → Kafka → Spark → HDFS
+                     ↓
+               Frontend Web (Dashboards)
