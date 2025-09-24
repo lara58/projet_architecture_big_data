@@ -78,6 +78,20 @@ services:
       - ./data:/data
       - ./src:/app
 
+   # Producteur météo Python
+  weather-producer:
+    build:
+      context: ./src/ingestion
+    container_name: weather-producer
+    depends_on:
+      - kafka
+    volumes:
+      - ./src/ingestion:/app
+    working_dir: /app
+    command: python producer.py
+
+
+
 # Volumes persistants
 volumes:
   zookeeper_data:
