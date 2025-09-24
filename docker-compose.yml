@@ -90,6 +90,19 @@ services:
     working_dir: /app
     command: sh -c "sleep 30 && python producer.py"
 
+  # Consumer PostgreSQL
+  weather-consumer:
+    build:
+      context: ./src/ingestion
+    container_name: weather-consumer
+    depends_on:
+      - kafka
+      - postgres
+    volumes:
+      - ./src/ingestion:/app
+    working_dir: /app
+    command: sh -c "sleep 45 && python consumer_postgres.py"
+
 
   hdfs-namenode:
     image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
