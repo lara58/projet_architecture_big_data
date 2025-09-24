@@ -1,0 +1,8 @@
+# Gitignore minimal
+.env
+__pycache__/
+*.pyc
+*.log
+data/
+.vscode/
+.idea/
