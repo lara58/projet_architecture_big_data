@@ -54,7 +54,8 @@ cities = [
     
     # Afrique
     {"name": "Cairo", "lat": 30.0444, "lon": 31.2357},
-    {"name": "Cape Town", "lat": -33.9249, "lon": 18.4241}
+    {"name": "Cape Town", "lat": -33.9249, "lon": 18.4241},
+    {"name": "Algiers", "lat": 36.7538, "lon": 3.0588}
 ]
 
 def get_weather_data(city):
