@@ -118,6 +118,28 @@ services:
     volumes:
       - hdfs_datanode:/hadoop/dfs/data
 
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: weatherdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
 
 # Volumes persistants
 volumes:
@@ -129,7 +151,7 @@ volumes:
     driver: local
   hdfs_namenode:
   hdfs_datanode:
-
+  postgres_data:
 # Réseau pour la communication entre services
 networks:
   default:
