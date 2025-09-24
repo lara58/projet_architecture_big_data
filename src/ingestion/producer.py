@@ -24,9 +24,37 @@ producer = KafkaProducer(
 
 # Liste des villes avec leurs coordonnées
 cities = [
+    # Europe
     {"name": "Paris", "lat": 48.8566, "lon": 2.3522},
+    {"name": "London", "lat": 51.5074, "lon": -0.1278},
+    {"name": "Berlin", "lat": 52.5200, "lon": 13.4050},
+    {"name": "Madrid", "lat": 40.4168, "lon": -3.7038},
+    {"name": "Rome", "lat": 41.9028, "lon": 12.4964},
+    
+    # Amérique du Nord
     {"name": "New York", "lat": 40.7128, "lon": -74.0060},
-    {"name": "Tokyo", "lat": 35.6762, "lon": 139.6503}
+    {"name": "Los Angeles", "lat": 34.0522, "lon": -118.2437},
+    {"name": "Toronto", "lat": 43.6532, "lon": -79.3832},
+    {"name": "Mexico City", "lat": 19.4326, "lon": -99.1332},
+    
+    # Asie
+    {"name": "Tokyo", "lat": 35.6762, "lon": 139.6503},
+    {"name": "Beijing", "lat": 39.9042, "lon": 116.4074},
+    {"name": "Mumbai", "lat": 19.0760, "lon": 72.8777},
+    {"name": "Seoul", "lat": 37.5665, "lon": 126.9780},
+    {"name": "Bangkok", "lat": 13.7563, "lon": 100.5018},
+    
+    # Océanie
+    {"name": "Sydney", "lat": -33.8688, "lon": 151.2093},
+    {"name": "Melbourne", "lat": -37.8136, "lon": 144.9631},
+    
+    # Amérique du Sud
+    {"name": "São Paulo", "lat": -23.5505, "lon": -46.6333},
+    {"name": "Buenos Aires", "lat": -34.6118, "lon": -58.3960},
+    
+    # Afrique
+    {"name": "Cairo", "lat": 30.0444, "lon": 31.2357},
+    {"name": "Cape Town", "lat": -33.9249, "lon": 18.4241}
 ]
 
 def get_weather_data(city):
@@ -90,7 +118,7 @@ while True:
                 print(f"Erreur Kafka pour {city['name']}: {e}")
         
         # Délai entre chaque ville pour éviter de surcharger l'API
-        time.sleep(5)
+        time.sleep(3)  # 3 secondes entre chaque ville (20 villes = 1 minute)
     
-    print("🔄 Cycle terminé, attente 2 minutes...")
-    time.sleep(120)  # Attendre 2 minutes entre les cycles
+    print("Cycle terminé, attente 3 minutes...")
+    time.sleep(180)  # Attendre 3 minutes entre les cycles (plus de villes = plus de données)
