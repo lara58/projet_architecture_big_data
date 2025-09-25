@@ -2,6 +2,7 @@ import json
 import time
 import requests
 from kafka import KafkaProducer
+from kafka.errors import NoBrokersAvailable
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -16,11 +17,23 @@ adapter = HTTPAdapter(max_retries=retry_strategy)
 session.mount("http://", adapter)
 session.mount("https://", adapter)
 
-# Connexion au broker Kafka
-producer = KafkaProducer(
-    bootstrap_servers='kafka:29092',
-    value_serializer=lambda v: json.dumps(v).encode('utf-8')
-)
+def get_kafka_producer(bootstrap_servers='kafka:29092', retries=12, delay=5):
+    """Create a KafkaProducer with retries to handle broker startup delays."""
+    for attempt in range(1, retries + 1):
+        try:
+            p = KafkaProducer(
+                bootstrap_servers=bootstrap_servers,
+                value_serializer=lambda v: json.dumps(v).encode('utf-8')
+            )
+            print(f"Connected to Kafka brokers at {bootstrap_servers}")
+            return p
+        except NoBrokersAvailable:
+            print(f"No Kafka brokers available (attempt {attempt}/{retries}), retrying in {delay}s...")
+            time.sleep(delay)
+    raise RuntimeError(f"Unable to connect to Kafka brokers at {bootstrap_servers} after {retries} attempts")
+
+# Connexion au broker Kafka (avec retries)
+producer = get_kafka_producer()
 
 # Liste des villes avec leurs coordonnées
 cities = [
@@ -120,6 +133,6 @@ while True:
         
         # Délai entre chaque ville pour éviter de surcharger l'API
         time.sleep(3)  # 3 secondes entre chaque ville (20 villes = 1 minute)
-    
-    print("Cycle terminé, attente 3 minutes...")
-    time.sleep(180)  # Attendre 3 minutes entre les cycles (plus de villes = plus de données)
+
+    print("Cycle terminé, attente 30 minutes...")
+    time.sleep(1800)  # Attendre 30 minutes entre les cycles (plus de villes = plus de données)

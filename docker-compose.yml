@@ -103,13 +103,29 @@ services:
     working_dir: /app
     command: sh -c "sleep 45 && python consumer_postgres.py"
 
+  weather-batch:
+    build:
+      context: ./src/batch
+    container_name: weather-batch
+    depends_on:
+      - spark-master
+      - postgres
+      - hdfs-namenode
+    volumes:
+      - ./src:/app
+    working_dir: /app
+    environment:
+      - SPARK_MODE=submit
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    command: tail -f /dev/null
+
 
   hdfs-namenode:
     image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
     container_name: hdfs-namenode
     environment:
       - CLUSTER_NAME=test
-      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      - CORE_CONF_fs_defaultFS=hdfs://hdfs-namenode:9000
       - HDFS_CONF_dfs_namenode_name_dir=/hadoop/dfs/name
       - HDFS_CONF_dfs_replication=1
     ports:
@@ -122,7 +138,7 @@ services:
     image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
     container_name: hdfs-datanode
     environment:
-      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      - CORE_CONF_fs_defaultFS=hdfs://hdfs-namenode:9000
       - HDFS_CONF_dfs_data_dir=/hadoop/dfs/data
     depends_on:
       - hdfs-namenode
