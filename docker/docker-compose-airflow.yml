@@ -1,7 +1,31 @@
 version: '3'
 
+x-airflow-common:
+  &airflow-common
+  image: apache/airflow:3.0.0
+  environment:
+    &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    AIRFLOW__CORE__FERNET_KEY: '46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqDDho='
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__API__AUTH_BACKEND: 'airflow.api.auth.backend.basic_auth'
+    AIRFLOW__CORE__ENABLE_LEGACY_API: 'true'
+    AIRFLOW__CORE__XCOM_BACKEND: 'airflow.models.xcom.BaseXCom'
+    AIRFLOW__DAG_PROCESSOR__REFRESH_INTERVAL: '30'
+  volumes:
+    - ../dags:/opt/airflow/dags
+    - ../plugins:/opt/airflow/plugins
+    - ../logs:/opt/airflow/logs
+    - ./data:/data
+  # user: "${AIRFLOW_UID:-50000}:0"
+  depends_on:
+    &airflow-common-depends-on
+    postgres:
+      condition: service_healthy
+
 services:
-  # PostgreSQL pour Airflow
   postgres:
     image: postgres:13
     container_name: postgres
@@ -13,29 +37,69 @@ services:
       - POSTGRES_DB=airflow
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      retries: 5
 
-  # Airflow Webserver + Scheduler
-  airflow:
-    image: apache/airflow:2.7.1
-    container_name: airflow
-    depends_on:
-      - postgres
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: airflow-webserver
+    command: webserver
     ports:
-      - "8090:8080"  # Airflow UI (changé à 8090 car 8080 est utilisé par Spark Master)
+      - "8090:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: airflow-scheduler
+    command: scheduler
+    healthcheck:
+      test: ["CMD-SHELL", 'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"']
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-init:
+    <<: *airflow-common
+    container_name: airflow-init
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        echo "Initializing airflow database..."
+        airflow db migrate
+        airflow users create \
+          --username admin \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com \
+          --password admin
+        echo "Initialization complete."
+    environment:
+      <<: *airflow-common-env
+    # user: "0:0"
     volumes:
       - ../dags:/opt/airflow/dags
       - ../plugins:/opt/airflow/plugins
       - ../logs:/opt/airflow/logs
       - ./data:/data
-    environment:
-      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
-      - AIRFLOW__CORE__FERNET_KEY=46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqDDho=
-      - AIRFLOW__CORE__LOAD_EXAMPLES=false
-      - AIRFLOW__API__AUTH_BACKEND=airflow.api.auth.backend.basic_auth
-    command: bash -c "airflow db init && airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com && airflow webserver & airflow scheduler"
 
-# Volumes pour la persistance des données
 volumes:
   postgres_data:
     driver: local

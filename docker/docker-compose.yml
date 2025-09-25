@@ -39,44 +39,32 @@ services:
 
   # Spark Master
   spark-master:
-    image: bitnami/spark:3.4
-    hostname: spark-master
+    image: bitnami/spark:3.5
     container_name: spark-master
-    ports:
-      - "8080:8080"  # Spark Master Web UI
-      - "7077:7077"  # Spark Master Port
     environment:
       - SPARK_MODE=master
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-      - SPARK_RPC_ENCRYPTION_ENABLED=no
-      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-      - SPARK_SSL_ENABLED=no
-      - SPARK_MASTER_HOST=spark-master
-    volumes:
-      - ./data:/data
-      - ./src:/app
+    ports:
+      - "7077:7077"
+      - "8081:8080"        # UI interne 8080 exposée sur 8081 hôte
+    networks:
+      - default
+      - bigdata-net
 
   # Spark Worker
   spark-worker:
-    image: bitnami/spark:3.4
-    hostname: spark-worker
+    image: bitnami/spark:3.5
     container_name: spark-worker
     depends_on:
       - spark-master
-    ports:
-      - "8081:8081"  # Spark Worker Web UI
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
-      - SPARK_WORKER_MEMORY=2g
-      - SPARK_WORKER_CORES=2
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-      - SPARK_RPC_ENCRYPTION_ENABLED=no
-      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-      - SPARK_SSL_ENABLED=no
-    volumes:
-      - ./data:/data
-      - ./src:/app
+    # (facultatif exposer l’UI worker interne 8081 sur 8082 hôte)
+    ports:
+      - "8082:8081"
+    networks:
+      - default
+      - bigdata-net
 
 # Volumes persistants
 volumes:
@@ -91,3 +79,5 @@ volumes:
 networks:
   default:
     driver: bridge
+  bigdata-net:
+    external: true

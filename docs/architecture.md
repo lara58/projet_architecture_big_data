@@ -9,7 +9,10 @@ L'architecture est basée sur les principes d'une architecture Lambda, combinant
 - **Couche Batch** : Pour le traitement de gros volumes de données historiques
 - **Couche Serving** : Pour l'exposition des résultats via des API et des interfaces
 
-![Architecture Lambda](https://raw.githubusercontent.com/lara58/projet_architecture_big_data/main/docs/images/architecture_lambda.png)
+## Évolutions majeures
+- Mise à jour vers **Apache Airflow 3.0.0** avec Task Flow API
+- Architecture en **conteneurs Docker séparés** pour meilleure isolation
+- **Réseau partagé** pour la communication inter-services
 
 ## Composants clés
 
@@ -19,7 +22,7 @@ L'architecture est basée sur les principes d'une architecture Lambda, combinant
 
 - **Source** : API Open-Meteo (https://api.open-meteo.com/v1/forecast)
 - **Fréquence d'ingestion** : Horaire
-- **Méthode** : Appels REST via scripts Python
+- **Méthode** : Appels REST via scripts Python orchestrés par Airflow
 - **Format de données** : JSON
 - **Destination** : Topics Kafka
   - `weather-data` : Données brutes de l'API
@@ -30,8 +33,8 @@ L'architecture est basée sur les principes d'une architecture Lambda, combinant
 
 **Couche Batch**
 - **Technologie** : Apache Spark
-- **Type de traitement** : Jobs quotidiens et mensuels
-- **Stockage des résultats** : Volumes partagés (remplaçant HDFS)
+- **Type de traitement** : Jobs quotidiens et mensuels via `SparkSubmitOperator`
+- **Stockage des résultats** : Volumes Docker partagés
 - **Formats** : Parquet pour les analyses, CSV pour les exports
 
 **Couche Speed**
@@ -41,17 +44,17 @@ L'architecture est basée sur les principes d'une architecture Lambda, combinant
 
 ### 3. Orchestration
 
-**Apache Airflow**
+**Apache Airflow 3.0.0**
+- **Nouveautés** : Utilisation du Task Flow API avec décorateurs `@task`, `@dag`
 - **DAGs** :
   - `weather_ingestion_dag.py` : Ingestion des données météo
   - `weather_batch_dag.py` : Traitement batch quotidien et mensuel
+  - `weather_analysis_dag.py` : Analyse et visualisation des données avec API Task Flow
   - `weather_alerts_dag.py` : Surveillance des alertes météo
-- **Fréquence** : Horaire, Quotidienne, Mensuelle
 
 ### 4. Stockage
 
 **Volumes Docker**
-- **Remplace HDFS** pour simplifier l'architecture
 - **Structure** :
   - `/data/raw` : Données brutes de l'API
   - `/data/processed` : Résultats du traitement Spark
@@ -75,67 +78,134 @@ L'architecture est basée sur les principes d'une architecture Lambda, combinant
    - Les données sont publiées dans le topic Kafka `weather-data`
 
 2. **Traitement temps réel** :
-   - Kafka Streams traite les données en temps réel
+   - Spark Streaming traite les données du topic Kafka en temps réel
    - Des alertes sont générées pour les conditions météo extrêmes
    - Les alertes sont publiées dans `weather-alerts`
 
 3. **Traitement batch** :
-   - Airflow orchestre des jobs Spark quotidiens
+   - Airflow 3.0 orchestre des jobs Spark quotidiens
    - Les données sont agrégées par ville, région
    - Les résultats sont stockés en format Parquet dans `/data/processed`
-   - Des statistiques mensuelles sont générées
 
 4. **Exposition des données** :
    - Les résultats sont exposés via une API REST
    - Des tableaux de bord interactifs affichent les données
-   - Les utilisateurs peuvent filtrer, trier et télécharger les données
 
 ## Déploiement
 
-L'ensemble du système est déployé avec Docker et Docker Compose :
+L'architecture est déployée en deux stacks séparés mais connectés:
 
-- **Infrastructure principale** : `docker-compose.yml`
+- **Stack Big Data** : `docker-compose.yml`
   - Kafka + Zookeeper
   - Spark Master + Worker
-  - Volumes partagés
 
-- **Orchestration** : `docker-compose-airflow.yml`
-  - Airflow Webserver + Scheduler
+- **Stack Orchestration** : `docker-compose-airflow.yml`
+  - Airflow 3.0.0 (Scheduler + API Server)
   - PostgreSQL (base de données Airflow)
+  - LocalExecutor (adapté aux machines uniques)
+
+### Communication inter-stack
+- Réseau partagé `bigdata-net` pour permettre à Airflow de communiquer avec Kafka et Spark
 
 ## Connectivité entre services
 
 - Kafka est accessible sur le port 9092
-- Spark Master UI est accessible sur le port 8080
-- Spark Worker UI est accessible sur le port 8081
-- Airflow est accessible sur le port 8080
+- Spark Master UI est accessible sur le port 8081 (port 8080 interne)
+- Spark Worker UI est accessible sur le port 8082
+- Airflow UI est accessible sur le port 8080
 
-## Tests de validation
+## Lancement de l'environnement
 
-Pour valider l'architecture, exécutez :
+Pour démarrer l'environnement complet:
+
 ```bash
-scripts/test-connectivity.bat
+# Créer le réseau partagé (une seule fois)
+docker network create bigdata-net
+
+# Lancer les deux stacks
+docker compose -f docker-compose-airflow.yml -f docker-compose.yml up -d
 ```
 
-Ce script teste la connectivité entre tous les composants.
+┌─────────────────────────────────────────────────────────────────────┐
+│                           ARCHITECTURE                              │
+└─────────────────────────────────────────────────────────────────────┘
+                                 │
+┌─────────────────────┬─────────┴──────────┬──────────────────────────┐
+│                     │                    │                          │
+▼                     ▼                    ▼                          ▼
+┌─────────────────┐   ┌──────────────┐   ┌────────────────┐   ┌─────────────┐
+│  Stack Airflow  │   │  Stack Data  │   │  Applications  │   │    Source   │
+└────────┬────────┘   └──────┬───────┘   └───────┬────────┘   └──────┬──────┘
+         │                   │                   │                   │
+         ▼                   ▼                   ▼                   ▼
+┌─────────────────┐   ┌──────────────┐   ┌────────────────┐   ┌─────────────┐
+│ Airflow 3.0.0   │   │ Kafka        │   │ Dashboard Web  │   │ Open-Meteo  │
+│ - Scheduler     │◄─┐│ - Topics     │   │               │   │ API         │
+│ - API Server    │  ││ - Producer   │◄──┼───────────────┐│   │             │
+│ - LocalExecutor │  │└──────────────┘   │              ││   └──────┬──────┘
+└────────┬────────┘  │                   └──────────────┘│          │
+         │           │                                   │          │
+         ▼           │                                   │          │
+┌─────────────────┐  │┌──────────────┐                   │          │
+│ PostgreSQL DB   │  ││ Spark        │                   │          │
+└─────────────────┘  ││ - Master     │◄──────────────────┘          │
+                     ││ - Worker     │                              │
+                     │└──────┬───────┘                              │
+                     │       │                                      │
+                     │       ▼                                      │
+                     │┌──────────────┐                              │
+                     ││ Data Volumes │                              │
+                     │└──────────────┘                              │
+                     └───────────────────────────────────────────────┘
+                                     │
+                                     ▼
+                        ┌───────────────────────┐
+                        │  Réseau bigdata-net   │
+                        └───────────────────────┘
 
-## Schéma technique
 
-```
-┌─────────────┐     ┌────────┐     ┌────────────┐     ┌─────────────┐
-│ Open-Meteo  │────▶│ Kafka  │────▶│ Spark      │────▶│ Volume      │
-│ API         │     │        │     │ Processing │     │ Storage     │
-└─────────────┘     └────────┘     └────────────┘     └─────────────┘
-                         │                │                 │
-                         ▼                ▼                 ▼
-                    ┌────────────────────────────────────────────┐
-                    │              Airflow                       │
-                    │        (Orchestration des tâches)          │
-                    └────────────────────────────────────────────┘
-                                      │
-                                      ▼
-                               ┌─────────────┐
-                               │ Dashboard   │
-                               │ Web         │
-                               └─────────────┘
-```
+┌─────────────────────────────────────────────────────────────────┐
+│                       ARCHITECTURE LAMBDA                       │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+           ┌─────────────────┴─────────────────┐
+           │                                   │
+           ▼                                   ▼
+┌─────────────────────┐               ┌─────────────────────┐
+│    SOURCE DATA      │               │   QUERY INTERFACE   │
+│    (Open-Meteo)     │               │    (Dashboard)      │
+└─────────┬───────────┘               └─────────────────────┘
+          │                                      ▲
+          ▼                                      │
+┌─────────────────────┐                          │
+│      KAFKA          │                          │
+│  Message Broker     │                          │
+└─────────┬───────────┘                          │
+          │                                      │
+          ├──────────────┬───────────────────────┘
+          │              │                      
+          ▼              ▼                      
+┌─────────────────┐ ┌────────────────┐            
+│  BATCH LAYER    │ │  SPEED LAYER   │            
+│                 │ │                │            
+│  - Spark Batch  │ │ - Spark        │            
+│    Processing   │ │   Streaming    │            
+│  - All Data     │ │ - Recent Data  │            
+│  - Accurate     │ │ - Low Latency  │            
+└────────┬────────┘ └────────┬───────┘            
+         │                   │                    
+         ▼                   ▼                    
+┌────────────────┐  ┌────────────────┐            
+│  BATCH VIEWS   │  │ REALTIME VIEWS │            
+└────────┬───────┘  └────────┬───────┘            
+         │                   │                    
+         └─────────┬─────────┘                    
+                   │                              
+                   ▼                              
+         ┌───────────────────────┐                
+         │    SERVING LAYER      │                
+         │                       │                
+         │ - Combines Views      │                
+         │ - Indexes Results     │                
+         │ - Serves Queries      │                
+         └───────────────────────┘
