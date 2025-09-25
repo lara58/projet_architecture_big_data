@@ -61,6 +61,7 @@ services:
     image: bitnami/spark:3.4
     hostname: spark-worker
     container_name: spark-worker
+    user: root
     depends_on:
       - spark-master
     ports:
@@ -74,6 +75,7 @@ services:
       - SPARK_RPC_ENCRYPTION_ENABLED=no
       - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
       - SPARK_SSL_ENABLED=no
+      - HADOOP_USER_NAME=root
     volumes:
       - ./data:/data
       - ./src:/app
@@ -107,6 +109,7 @@ services:
     build:
       context: ./src/batch
     container_name: weather-batch
+    user: root
     depends_on:
       - spark-master
       - postgres
@@ -117,6 +120,7 @@ services:
     environment:
       - SPARK_MODE=submit
       - SPARK_MASTER_URL=spark://spark-master:7077
+      - HADOOP_USER_NAME=root
     command: tail -f /dev/null
 
 
