@@ -1,44 +1,63 @@
-# Projet d'Architecture Big Data - Analyse des Tremblements de Terre
+# Projet d'Architecture Big Data - Analyse des Données Météorologiques
 
 ## Description du Projet
 
-Ce projet consiste à développer une architecture Big Data pour analyser les données des tremblements de terre en temps réel en utilisant l'API USGS (United States Geological Survey). L'objectif est de créer un pipeline de données complet pour ingérer, traiter et analyser les données sismiques mondiales.
+Ce projet consiste à développer une architecture Big Data pour analyser les données météorologiques en temps réel en utilisant l'API Open-Meteo. L'objectif est de créer un pipeline de données complet pour ingérer, traiter et analyser les données météorologiques mondiales avec une résolution horaire.
 
 ## API Utilisée
 
-**USGS Earthquake Catalog API**
-- URL : https://earthquake.usgs.gov/fdsnws/event/1/
-- Documentation : https://earthquake.usgs.gov/fdsnws/event/1/
-- Format de données : JSON, CSV, XML
-- Fréquence de mise à jour : Temps réel
+**Open-Meteo Weather API**
+- URL : https://api.open-meteo.com/v1/forecast
+- Documentation : https://open-meteo.com/en/docs
+- Format de données : JSON
+- Fréquence de mise à jour : Horaire
+- Accès : Gratuit, sans clé API requise
+- Résolution : 1-11 km selon la localisation
+- Données historiques : 80+ années disponibles
 
-### Données Disponibles dans la réponse USGS
+### Données Disponibles dans la réponse Open-Meteo
 
-**Magnitude des tremblements de terre**
-- Champ : `mag`
-- Exemple : 6.4
+**1. Données de météo actuelle (`current_weather`)**
+- `temperature` : Température (°C)
+- `windspeed` : Vitesse du vent (km/h ou m/s selon le paramètre)
+- `winddirection` : Direction du vent (degrés)
+- `weathercode` : Code météo (ensoleillé, nuageux, pluie, etc.)
+- `time` : Date et heure de la mesure
 
-**Localisation géographique (latitude, longitude, profondeur)**
-- Champs : `geometry.coordinates` → [longitude, latitude, profondeur] (en km)
+**2. Données de prévision (`hourly` ou `daily`)**
+- `temperature_2m` : Température à 2 mètres (°C)
+- `relative_humidity_2m` : Humidité relative à 2 mètres (%)
+- `windspeed_10m` : Vitesse du vent à 10 mètres (km/h)
+- `precipitation` : Précipitations (mm)
+- `weathercode` : Code météo (voir documentation pour les valeurs)
+- `pressure_msl` : Pression atmosphérique au niveau de la mer (hPa)
+- `cloudcover` : Couverture nuageuse (%)
+- `visibility` : Visibilité (km)
+- `dewpoint_2m` : Point de rosée à 2 mètres (°C)
+- `uv_index` : Indice UV
+- `sunrise` / `sunset` : Heure du lever/coucher du soleil (prévisions journalières)
 
-**Date et heure de l'événement**
-- Champ : `time` (timestamp UNIX, à convertir en date "humaine")
-- Champ : `updated` (dernière mise à jour de l'info)
+**3. Coordonnées et infos de la requête**
+- `latitude` / `longitude` : Coordonnées de la localisation demandée
+- `timezone` : Fuseau horaire utilisé
+- `generationtime_ms` : Temps de génération de la réponse (ms)
 
-**Type de tremblement de terre**
-- Champ : `type` (dans properties, généralement "earthquake")
-
-**Région / Pays affecté**
-- Champ : `place` (description du lieu : ville, région, pays)
-
-**Intensité ressentie**
-- Champs :
-  - `felt` (nombre de personnes ayant ressenti le séisme)
-  - `cdi` (Community Determined Intensity, intensité ressentie)
-  - `mmi` (Modified Mercalli Intensity, intensité instrumentale)
-
-**Alertes tsunami**
-- Champ : `tsunami` (0 = pas d'alerte, 1 = alerte tsunami)
+**Exemple de réponse JSON météo actuelle :**
+```json
+{
+  "latitude": 48.85,
+  "longitude": 2.35,
+  "generationtime_ms": 0.3,
+  "timezone": "GMT",
+  "current_weather": {
+    "temperature": 19.2,
+    "windspeed": 14.4,
+    "winddirection": 220,
+    "weathercode": 3,
+    "time": "2025-09-24T09:00"
+  }
+}
+```
 
 ## Architecture du Système
 
